@@ -7,6 +7,8 @@ RUN yum update -y
 # Centos 7 supported gcc 4.8.5
 RUN yum -y groupinstall "Development Tools"
 RUN yum -y install wget
+RUN yum -y install zlib-devel
+RUN yum -y install which
 
 # Following copied from gcc docker file
 ENV GPG_KEYS \
@@ -24,29 +26,29 @@ RUN set -xe \
 
 ENV GCC_VERSION 6.2.0
 
+# This takes 1 hour plus on 2 cores.
 RUN curl -fSL "http://ftpmirror.gnu.org/gcc/gcc-$GCC_VERSION/gcc-$GCC_VERSION.tar.bz2" -o gcc.tar.bz2 \
 	&& curl -fSL "http://ftpmirror.gnu.org/gcc/gcc-$GCC_VERSION/gcc-$GCC_VERSION.tar.bz2.sig" -o gcc.tar.bz2.sig 
+  && gpg --batch --verify gcc.tar.bz2.sig gcc.tar.bz2 \
+	&& mkdir -p /usr/src/gcc \
+	&& tar -xf gcc.tar.bz2 -C /usr/src/gcc --strip-components=1 \
+	&& rm gcc.tar.bz2* \
+	&& cd /usr/src/gcc \
+	&& ./contrib/download_prerequisites \
+	&& { rm *.tar.* || true; } \
+	&& dir="$(mktemp -d)" \
+	&& cd "$dir" \
+	&& /usr/src/gcc/configure \
+		--with-system-zlib \
+    --disable-multilib \
+		--enable-languages=c,c++ \
+	&& make -j"$(nproc)" \
+	&& make install-strip \
+	&& cd .. \
+	&& rm -rf "$dir"
 
-#   && gpg --batch --verify gcc.tar.bz2.sig gcc.tar.bz2 \
-# 	&& mkdir -p /usr/src/gcc \
-# 	&& tar -xf gcc.tar.bz2 -C /usr/src/gcc --strip-components=1 \
-# 	&& rm gcc.tar.bz2* \
-# 	&& cd /usr/src/gcc \
-# 	&& ./contrib/download_prerequisites \
-# 	&& { rm *.tar.* || true; } \
-# 	&& dir="$(mktemp -d)" \
-# 	&& cd "$dir" \
-# 	&& /usr/src/gcc/configure \
-# 		--with-system-zlib \
-#     --disable-multilib \
-# 		--enable-languages=c,c++ \
-# 	&& make -j"$(nproc)" \
-# 	&& make install-strip \
-# 	&& cd .. \
-# 	&& rm -rf "$dir"
-
-# # gcc installs .so files in /usr/local/lib64...
-# RUN echo '/usr/local/lib64' > /etc/ld.so.conf.d/local-lib64.conf \
-# 	&& ldconfig -v
+# gcc installs .so files in /usr/local/lib64...
+RUN echo '/usr/local/lib64' > /etc/ld.so.conf.d/local-lib64.conf \
+	&& ldconfig -v
 
 CMD ["bash"]
