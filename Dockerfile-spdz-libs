@@ -35,7 +35,5 @@ RUN curl -fSL "https://download.libsodium.org/libsodium/releases/libsodium-1.0.1
 	&& rm -rf "$dir"	
 
 # Note sure why installing into /usr/local/lib (not lib64), but ensure added to library path
-RUN echo '/usr/local/lib' > /etc/ld.so.conf.d/local-lib.conf
-
-CMD ["bash"]
-
+RUN echo '/usr/local/lib' > /etc/ld.so.conf.d/local-lib.conf \
+	&& ldconfig -v
